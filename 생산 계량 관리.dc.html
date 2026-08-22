@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#e7eaee;color:#14181d;font-family:'IBM Plex Sans KR',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#1758c4;text-decoration:none}
+a:hover{color:#0f3f92}
+input,select,button,textarea{font-family:inherit}
+button{cursor:pointer}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes belt{from{background-position:0 0}to{background-position:56px 0}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#e7eaee;display:flex;align-items:flex-start;justify-content:flex-start;overflow-x:auto">
+<div style="width:1440px;flex:none;margin:0 auto;min-height:900px;display:flex;background:#eef0f3;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.14)">
+
+  <aside style="width:216px;flex:none;background:#14181d;color:#fff;display:flex;flex-direction:column;padding:22px 0 18px">
+    <div style="padding:0 20px 22px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#6f7a86">JONGNO WORKS</div>
+      <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;margin-top:5px">생산 계량 모니터</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+        <button onClick="{{ n.go }}" style="{{ n.style }}">
+          <span style="{{ n.dotStyle }}"></span>
+          <span>{{ n.label }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="flex:1;min-height:24px"></div>
+    <div style="padding:0 20px;display:flex;flex-direction:column;gap:9px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;color:#6f7a86">TODAY</div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;color:#98a2ac">가동 벨트</span><span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600">{{ runningCount }} / {{ beltCount }}</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;color:#98a2ac">누적 생산</span><span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600">{{ todayTotal }} g</span></div>
+    </div>
+    <div style="padding:18px 20px 0;display:flex;align-items:center;gap:9px;border-top:1px solid #22272e;margin-top:16px">
+      <div style="width:30px;height:30px;border-radius:50%;background:#2a3038;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">김</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:600">김도현</div>
+        <div style="font-size:10.5px;color:#6f7a86">관리자</div>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+
+    <header style="flex:none;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#fff;border-bottom:1px solid #e1e5ea">
+      <div style="display:flex;align-items:center;gap:14px">
+        <sc-if value="{{ isBelt }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ backToList }}" style="width:32px;height:32px;border:1px solid #dfe3e8;background:#fff;border-radius:8px;font-size:15px;line-height:1;padding:0;color:#14181d">‹</button>
+        </sc-if>
+        <div style="font-size:18px;font-weight:600;letter-spacing:-.015em">{{ screenTitle }}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8a939d;padding-left:14px;border-left:1px solid #e1e5ea">{{ nowText }} 기준 · 실시간</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <sc-if value="{{ scaleOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;background:#e8f6ef;color:#0f7a51;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#12a06a"></span>저울 연결됨</div>
+        </sc-if>
+        <sc-if value="{{ scaleBad }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;background:#fdeaea;color:#c02b2f;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#d13438;animation:pulse 1s infinite"></span>저울 끊김</div>
+        </sc-if>
+        <sc-if value="{{ camOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;background:#e8f6ef;color:#0f7a51;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#12a06a"></span>카메라 연결됨</div>
+        </sc-if>
+        <sc-if value="{{ camBad }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;background:#fdeaea;color:#c02b2f;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#d13438;animation:pulse 1s infinite"></span>카메라 없음</div>
+        </sc-if>
+        <sc-if value="{{ storeOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;background:#e8f6ef;color:#0f7a51;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#12a06a"></span>저장소 정상</div>
+        </sc-if>
+        <sc-if value="{{ storeBad }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;background:#fdeaea;color:#c02b2f;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#d13438;animation:pulse 1s infinite"></span>저장 실패</div>
+        </sc-if>
+      </div>
+    </header>
+
+    <main style="flex:1;overflow-y:auto;overflow-x:hidden">
+
+    <!-- ══════ 생산 현황 ══════ -->
+    <sc-if value="{{ isMonitor }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:22px 24px 30px;display:flex;flex-direction:column;gap:12px">
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 2px">
+        <div style="font-size:14px;font-weight:600">컨베이어 벨트 · 당일 현황</div>
+        <div style="font-size:12.5px;color:#6f7a86">벨트를 클릭하면 진행 중 공정과 당일 기록이 펼쳐집니다</div>
+      </div>
+
+      <sc-for list="{{ beltRows }}" as="b" hint-placeholder-count="4">
+      <div style="{{ b.wrapStyle }}">
+        <button onClick="{{ b.select }}" style="{{ b.headStyle }}">
+          <span style="display:flex;align-items:baseline;gap:7px;width:118px;flex:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;letter-spacing:-.03em">{{ b.no }}</span>
+            <span style="font-size:13px;font-weight:600;opacity:.66">번 벨트</span>
+          </span>
+          <span style="{{ b.badgeStyle }}">{{ b.state }}</span>
+          <span style="width:190px;flex:none;font-size:13.5px;font-weight:500;text-align:left">{{ b.product }}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;opacity:.66;width:120px;flex:none;text-align:left">{{ b.lot }}</span>
+          <span style="flex:1;min-width:80px;display:flex;align-items:center;gap:10px">
+            <span style="flex:1;height:5px;border-radius:3px;overflow:hidden;background:rgba(127,140,155,.22)"><span style="{{ b.barStyle }}"></span></span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;opacity:.7;flex:none">{{ b.stageText }}</span>
+          </span>
+          <span style="width:150px;flex:none;text-align:right">
+            <span style="display:block;font-size:11px;opacity:.6">현재 로트 누적</span>
+            <span style="display:flex;align-items:baseline;gap:4px;justify-content:flex-end"><span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600">{{ b.total }}</span><span style="font-size:11.5px;opacity:.6">g</span></span>
+          </span>
+          <span style="width:132px;flex:none;text-align:right">
+            <span style="display:block;font-size:11px;opacity:.6">당일 {{ b.todayCount }}건 합계</span>
+            <span style="display:flex;align-items:baseline;gap:4px;justify-content:flex-end"><span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">{{ b.todayTotal }}</span><span style="font-size:11px;opacity:.6">g</span></span>
+          </span>
+          <span style="{{ b.chevStyle }}">›</span>
+        </button>
+
+      </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <!-- ══════ 벨트 상세 ══════ -->
+    <sc-if value="{{ isBelt }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:22px 24px 30px;display:flex;flex-direction:column;gap:14px">
+
+      <div style="border:1px solid #e1e5ea;border-radius:14px;overflow:hidden;background:#fff">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;background:#14181d;color:#fff">
+          <div style="display:flex;align-items:center;gap:16px">
+            <span style="display:flex;align-items:baseline;gap:7px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;letter-spacing:-.03em">{{ bd.no }}</span>
+              <span style="font-size:14px;font-weight:600;opacity:.7">번 벨트</span>
+            </span>
+            <span style="{{ bd.badgeStyle }}">{{ bd.state }}</span>
+            <span style="display:flex;column-gap:16px;font-size:13px;opacity:.78">
+              <span style="font-weight:500;opacity:1">{{ bd.product }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace">{{ bd.lot }}</span>
+              <span>담당 {{ bd.worker }}</span>
+              <span>최근 갱신 {{ bd.lastAt }}</span>
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:22px">
+            <sc-if value="{{ bd.liveOn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:12px;opacity:.6">실시간 저울</span>
+                <span style="display:flex;align-items:baseline;gap:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:-.03em">{{ liveWeight }}</span><span style="font-size:12px;opacity:.6">g</span></span>
+                <span style="{{ liveBadgeStyle }}">{{ liveBadge }}</span>
+              </div>
+            </sc-if>
+            <div style="text-align:right;border-left:1px solid rgba(255,255,255,.16);padding-left:22px">
+              <div style="font-size:12px;opacity:.6">현재 로트 누적</div>
+              <div style="display:flex;align-items:baseline;gap:5px;justify-content:flex-end"><span style="font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-.035em">{{ bd.total }}</span><span style="font-size:14px;opacity:.6">g</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:18px 22px 20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:13.5px;font-weight:600">진행 중 공정</span>
+            <span style="font-size:12px;color:#8a939d">{{ bd.stageText }} 완료 · 단계 사진 클릭 시 확대</span>
+          </div>
+          <div style="display:flex;align-items:stretch;border:1px solid #e1e5ea;border-radius:12px;overflow:hidden;background:#fff">
+            <sc-for list="{{ stages }}" as="s" hint-placeholder-count="4">
+              <div style="{{ s.cellStyle }}">
+                <div style="{{ s.headStyle }}">
+                  <span style="font-size:12.5px;font-weight:600">{{ s.label }}</span>
+                  <span style="{{ s.tagStyle }}">{{ s.tag }}</span>
+                </div>
+                <div style="padding:14px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:11px">
+                  <sc-if value="{{ s.hasPhoto }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ s.zoom }}" style="width:100%;height:116px;border:1px solid #e1e5ea;border-radius:10px;padding:0;overflow:hidden;background:#f0f2f5">
+                      <img src="{{ s.photo }}" alt="단계 사진" style="width:100%;height:100%;object-fit:cover;display:block">
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ s.noPhoto }}" hint-placeholder-val="{{ true }}">
+                    <div style="{{ s.placeholderStyle }}">{{ s.placeholderText }}</div>
+                  </sc-if>
+                  <div style="display:flex;align-items:baseline;gap:5px">
+                    <span style="{{ s.weightStyle }}">{{ s.weight }}</span><span style="font-size:13px;color:#6f7a86">g</span>
+                  </div>
+                  <div style="{{ s.cumStyle }}">누적 {{ s.cum }} g</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9aa4ae">{{ s.time }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e1e5ea;border-radius:14px;overflow:hidden">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding:15px 20px;border-bottom:1px solid #eef0f3">
+          <span style="font-size:13.5px;font-weight:600">당일 완료 기록</span>
+          <span style="font-size:12px;color:#8a939d">{{ bd.todayCount }}건 · 합계 {{ bd.todayTotal }} g · 최신순</span>
+        </div>
+        <div style="display:grid;grid-template-columns:140px 96px 1fr 1fr 1fr 1fr 124px;gap:12px;padding:10px 20px;background:#f7f8fa;border-bottom:1px solid #e1e5ea;font-size:11px;font-weight:600;color:#6f7a86">
+          <span>로트</span><span>완료 시각</span><span style="text-align:right">1단계</span><span style="text-align:right">2단계</span><span style="text-align:right">3단계</span><span style="text-align:right">4단계</span><span style="text-align:right">총 누적 (g)</span>
+        </div>
+        <sc-for list="{{ bd.today }}" as="t" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:140px 96px 1fr 1fr 1fr 1fr 124px;gap:12px;align-items:center;padding:10px 20px;border-bottom:1px solid #f4f6f8">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600">{{ t.lot }}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8a939d">{{ t.time }}</span>
+            <sc-for list="{{ t.cells }}" as="c" hint-placeholder-count="4">
+              <span style="display:flex;align-items:center;justify-content:flex-end;gap:9px">
+                <button onClick="{{ c.zoom }}" style="width:34px;height:34px;flex:none;border-radius:7px;border:1px solid #e1e5ea;padding:0;overflow:hidden">
+                  <img src="{{ c.photo }}" alt="단계 사진" style="width:100%;height:100%;object-fit:cover;display:block">
+                </button>
+                <span style="text-align:right;line-height:1.25">
+                  <span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600">{{ c.weight }}</span>
+                  <span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8a939d">누적 {{ c.cum }}</span>
+                </span>
+              </span>
+            </sc-for>
+            <span style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600">{{ t.total }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ bd.noToday }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:26px;text-align:center;font-size:12.5px;color:#8a939d">당일 완료된 로트가 없습니다.</div>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ══════ 작업 기록 ══════ -->
+    <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:22px 24px 30px;display:flex;flex-direction:column;gap:14px">
+
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;gap:7px">
+          <sc-for list="{{ beltFilters }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:7px;padding-left:6px;border-left:1px solid #dfe3e8">
+          <sc-for list="{{ dateFilters }}" as="df" hint-placeholder-count="4">
+            <button onClick="{{ df.pick }}" style="{{ df.style }}">{{ df.label }}</button>
+          </sc-for>
+        </div>
+        <input value="{{ query }}" onChange="{{ setQuery }}" placeholder="제품명 · 로트 · 담당자 검색" style="flex:1;max-width:280px;height:42px;border:1px solid #dfe3e8;border-radius:10px;padding:0 14px;font-size:13.5px;background:#fff">
+        <div style="flex:1"></div>
+        <div style="font-size:12.5px;color:#6f7a86">{{ recordCount }}건 · 합계 {{ recordTotal }} g</div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div style="width:600px;flex:none;display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ dateGroups }}" as="g" hint-placeholder-count="3">
+            <div style="background:#fff;border:1px solid #e1e5ea;border-radius:14px;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f7f8fa;border-bottom:1px solid #e1e5ea">
+                <div style="display:flex;align-items:baseline;gap:9px">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600">{{ g.date }}</span>
+                  <span style="font-size:12px;color:#6f7a86">{{ g.weekday }}</span>
+                  <sc-if value="{{ g.isToday }}" hint-placeholder-val="{{ false }}">
+                    <span style="background:#eaf1fd;color:#1758c4;border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:600">오늘</span>
+                  </sc-if>
+                </div>
+                <div style="font-size:12px;color:#6f7a86">{{ g.count }}건 · 합계 <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:#14181d">{{ g.total }}</span> g</div>
+              </div>
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                <button onClick="{{ r.open }}" style="{{ r.rowStyle }}">
+                  <span style="display:flex;align-items:baseline;gap:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">{{ r.belt }}</span><span style="font-size:11px;color:#8a939d">번</span></span>
+                  <span style="min-width:0">
+                    <span style="display:block;font-size:13.5px;font-weight:600">{{ r.product }}</span>
+                    <span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8a939d;margin-top:2px">{{ r.lot }}</span>
+                  </span>
+                  <span style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#6f7a86">{{ r.stageText }}</span>
+                  <span style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">{{ r.total }}</span>
+                  <span style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8a939d">{{ r.time }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noRecords }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border:1px dashed #d6dbe1;border-radius:14px;padding:30px;text-align:center;font-size:13px;color:#8a939d">조건에 맞는 기록이 없습니다.</div>
+          </sc-if>
+        </div>
+
+        <div style="flex:1;min-width:0;background:#fff;border:1px solid #e1e5ea;border-radius:14px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eef0f3">
+            <div>
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600">{{ rec.belt }}</span>
+                <span style="font-size:14px;font-weight:600">번 벨트 · {{ rec.product }}</span>
+              </div>
+              <div style="display:flex;column-gap:14px;font-size:12px;color:#6f7a86;margin-top:4px">
+                <span style="font-family:'IBM Plex Mono',monospace">{{ rec.lot }}</span><span>담당 {{ rec.worker }}</span><span>{{ rec.date }} {{ rec.time }}</span>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:11.5px;color:#6f7a86">총 누적 무게</div>
+              <div style="display:flex;align-items:baseline;gap:5px;justify-content:flex-end"><span style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;letter-spacing:-.03em">{{ rec.total }}</span><span style="font-size:13px;color:#6f7a86">g</span></div>
+            </div>
+          </div>
+          <div style="padding:18px 20px 20px">
+            <div style="display:flex;align-items:stretch;border:1px solid #e1e5ea;border-radius:12px;overflow:hidden;background:#fbfcfd">
+              <sc-for list="{{ recStages }}" as="s" hint-placeholder-count="4">
+                <div style="{{ s.cellStyle }}">
+                  <div style="{{ s.headStyle }}">
+                    <span style="font-size:12.5px;font-weight:600">{{ s.label }}</span>
+                  </div>
+                  <div style="padding:12px 13px 14px;display:flex;flex-direction:column;align-items:center;gap:9px">
+                    <button onClick="{{ s.zoom }}" style="width:100%;height:96px;border:1px solid #e1e5ea;border-radius:9px;padding:0;overflow:hidden;background:#f0f2f5">
+                      <img src="{{ s.photo }}" alt="단계 사진" style="width:100%;height:100%;object-fit:cover;display:block">
+                    </button>
+                    <div style="display:flex;align-items:baseline;gap:4px">
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em">{{ s.weight }}</span><span style="font-size:12px;color:#6f7a86">g</span>
+                    </div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#0f7a51;background:#e8f6ef;border-radius:6px;padding:4px 8px">누적 {{ s.cum }} g</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9aa4ae">{{ s.time }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ══════ 장비 관리 ══════ -->
+    <sc-if value="{{ isDevices }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:22px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1120px">
+      <div style="background:#fff;border:1px solid #e1e5ea;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:15px;font-weight:600">저울</div>
+          <sc-if value="{{ scaleOk }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#e8f6ef;color:#0f7a51;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:600">연결됨</div>
+          </sc-if>
+          <sc-if value="{{ scaleBad }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fdeaea;color:#c02b2f;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:600">연결 끊김</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ scaleSpecs }}" as="s" hint-placeholder-count="7">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;font-size:13px;border-top:1px solid #f0f2f5;padding-top:8px">
+              <span style="color:#6f7a86">{{ s.k }}</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:500">{{ s.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ testScale }}" style="height:46px;border-radius:10px;border:1px solid #1758c4;background:#fff;color:#1758c4;font-size:13.5px;font-weight:600">연결 테스트</button>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e1e5ea;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:15px;font-weight:600">카메라</div>
+          <sc-if value="{{ camOk }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#e8f6ef;color:#0f7a51;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:600">사용 가능</div>
+          </sc-if>
+          <sc-if value="{{ camBad }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fdeaea;color:#c02b2f;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:600">찾을 수 없음</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ camList }}" as="c" hint-placeholder-count="3">
+            <button onClick="{{ c.pick }}" style="{{ c.style }}">
+              <span style="font-size:13.5px;font-weight:600">{{ c.name }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#6f7a86">{{ c.res }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="height:150px;border-radius:10px;border:1px solid #e1e5ea;background:repeating-linear-gradient(38deg,#e9edf1 0 6px,#dfe4ea 6px 12px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#7b8590">촬영 프리뷰</div>
+        <button onClick="{{ shoot }}" style="height:46px;border-radius:10px;border:1px solid #1758c4;background:#fff;color:#1758c4;font-size:13.5px;font-weight:600">촬영 테스트</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ══════ 설정 ══════ -->
+    <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:22px 24px;max-width:720px;display:flex;flex-direction:column;gap:14px">
+      <div style="background:#fff;border:1px solid #e1e5ea;border-radius:14px;overflow:hidden">
+        <sc-for list="{{ settingsMenu }}" as="m" hint-placeholder-count="4">
+          <button onClick="{{ m.go }}" style="width:100%;text-align:left;background:#fff;border:none;border-bottom:1px solid #f0f2f5;padding:17px 18px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:14.5px;font-weight:500">{{ m.label }}</span>
+            <span style="display:flex;align-items:center;gap:10px"><span style="font-size:12.5px;color:#8a939d">{{ m.hint }}</span><span style="color:#c2c9d1;font-size:16px">›</span></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9aa4ae">JONGNO WORKS · v1.0.0 · build 2026.08.21 · Windows / macOS 데스크탑</div>
+    </div>
+    </sc-if>
+
+    <!-- ══════ 사용자 관리 ══════ -->
+    <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:22px 24px;max-width:880px;display:flex;flex-direction:column;gap:10px">
+      <sc-for list="{{ users }}" as="u" hint-placeholder-count="4">
+        <div style="background:#fff;border:1px solid #e1e5ea;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:13px">
+          <div style="width:40px;height:40px;flex:none;border-radius:50%;background:#f0f2f5;color:#6f7a86;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600">{{ u.initial }}</div>
+          <div style="flex:1">
+            <div style="font-size:14.5px;font-weight:600">{{ u.name }}</div>
+            <div style="font-size:12px;color:#8a939d">{{ u.meta }}</div>
+          </div>
+          <div style="{{ u.roleStyle }}">{{ u.role }}</div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <!-- ══════ 오류 상태 ══════ -->
+    <sc-if value="{{ isErrors }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:22px 24px;display:flex;flex-direction:column;gap:14px;max-width:1120px">
+      <div style="font-size:12.5px;color:#6f7a86">실제 운영 중 표시되는 오류 화면입니다. 각 버튼은 현황 화면의 복구 동작과 동일합니다.</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+        <div style="background:#fff;border:1px solid #f2c9ca;border-radius:14px;padding:20px;text-align:center">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fdeaea;margin:0 auto 12px"></div>
+          <div style="font-size:16px;font-weight:600;color:#c02b2f">저울 연결이 끊어졌습니다.</div>
+          <div style="font-size:13px;color:#6f7a86;margin-top:5px;line-height:1.5">서버로부터 무게 신호를 받지 못하고 있습니다. 해당 벨트의 계량이 중단됩니다.</div>
+          <button onClick="{{ recoverScale }}" style="margin-top:14px;height:46px;padding:0 24px;border-radius:10px;border:none;background:#d13438;color:#fff;font-size:14px;font-weight:600">다시 연결</button>
+        </div>
+        <div style="background:#fff;border:1px solid #f2c9ca;border-radius:14px;padding:20px;text-align:center">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fdeaea;margin:0 auto 12px"></div>
+          <div style="font-size:16px;font-weight:600;color:#c02b2f">카메라를 찾을 수 없습니다.</div>
+          <div style="font-size:13px;color:#6f7a86;margin-top:5px">카메라 권한 또는 기기 연결을 확인해주세요.</div>
+          <button onClick="{{ recoverCam }}" style="margin-top:14px;height:46px;padding:0 24px;border-radius:10px;border:none;background:#d13438;color:#fff;font-size:14px;font-weight:600">카메라 다시 검색</button>
+        </div>
+        <div style="background:#fff;border:1px solid #f6dcb2;border-radius:14px;padding:20px;text-align:center">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fff5e6;margin:0 auto 12px"></div>
+          <div style="font-size:16px;font-weight:600;color:#a65f00">무게가 안정될 때까지 기다려주세요.</div>
+          <div style="font-size:13px;color:#6f7a86;margin-top:5px">값이 계속 변동 중입니다. 자동 저장은 보류됩니다.</div>
+        </div>
+        <div style="background:#fff;border:1px solid #f2c9ca;border-radius:14px;padding:20px;text-align:center">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fdeaea;margin:0 auto 12px"></div>
+          <div style="font-size:16px;font-weight:600;color:#c02b2f">측정 정보를 저장하지 못했습니다.</div>
+          <div style="font-size:13px;color:#6f7a86;margin-top:5px">서버 저장소 응답이 없습니다. 데이터는 PC에 임시 보관됩니다.</div>
+          <button onClick="{{ retrySave }}" style="margin-top:14px;height:46px;padding:0 24px;border-radius:10px;border:none;background:#d13438;color:#fff;font-size:14px;font-weight:600">다시 저장</button>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #e1e5ea;border-radius:14px;padding:18px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:13.5px;font-weight:600">상태 시뮬레이션</div>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ faultChips }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    </main>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;right:24px;top:80px;z-index:80;background:#14181d;color:#fff;border-radius:11px;padding:13px 17px;display:flex;align-items:center;gap:10px;box-shadow:0 14px 34px rgba(0,0,0,.3);animation:rise .18s ease-out">
+        <span style="width:8px;height:8px;border-radius:50%;background:#12a06a;flex:none"></span>
+        <span style="font-size:13.5px;font-weight:500">{{ toast }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ zoomSrc }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeZoom }}" style="position:absolute;inset:0;z-index:90;background:rgba(10,12,15,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+        <img src="{{ zoomSrc }}" alt="단계 사진 확대" style="width:520px;border-radius:14px;display:block">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#c2c9d1">{{ zoomCaption }}</div>
+        <button onClick="{{ closeZoom }}" style="border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;border-radius:10px;padding:11px 24px;font-size:13.5px;font-weight:600">닫기 (ESC)</button>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;stabilizeMs&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1800,&quot;min&quot;:600,&quot;max&quot;:4000,&quot;step&quot;:100,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;저울 시뮬레이션&quot;},&quot;autoScale&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;저울 시뮬레이션&quot;},&quot;deviceFault&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;scale&quot;,&quot;camera&quot;,&quot;storage&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;장비 상태&quot;}}">
+const fmt = mg => (mg/1000).toFixed(3);
+const pad2 = n => String(n).padStart(2,'0');
+const clock = d => pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds());
+const photo = (stage,tint) => 'data:image/svg+xml;utf8,'+encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='220'><defs><pattern id='p' width='12' height='12' patternTransform='rotate(38)' patternUnits='userSpaceOnUse'><rect width='12' height='12' fill='"+tint+"'/><rect width='5' height='12' fill='#cfd5dc'/></pattern></defs><rect width='300' height='220' fill='url(#p)'/><rect x='0' y='178' width='300' height='42' fill='rgba(20,24,29,.72)'/><text x='14' y='205' font-family='monospace' font-size='16' fill='#ffffff'>STAGE "+stage+"</text><text x='196' y='205' font-family='monospace' font-size='12' fill='#c2c9d1'>2448x2048</text></svg>");
+
+const TINTS = ['#e4e8ec','#e8e5e0','#e2e6ea','#e7e4e9'];
+const STAGE_LABELS = ['1단계 · 성형','2단계 · 조립','3단계 · 가공','4단계 · 마감'];
+
+const BELTS = [
+  {no:1, product:'Gold Necklace A', code:'GNA-14K-01', worker:'김도현', state:'가동중', lot:'L-260821-014', live:true,
+   stages:[{mg:2150,time:'14:21:32'},{mg:820,time:'14:24:08'},{mg:null,time:null},{mg:null,time:null}]},
+  {no:2, product:'Silver Ring B', code:'SRB-925-07', worker:'박서진', state:'가동중', lot:'L-260821-022', live:false,
+   stages:[{mg:3420,time:'13:58:11'},{mg:1180,time:'14:06:40'},{mg:940,time:'14:15:22'},{mg:null,time:null}]},
+  {no:3, product:'Gold Earring C', code:'GEC-18K-02', worker:'이민우', state:'대기', lot:'L-260821-030', live:false,
+   stages:[{mg:1120,time:'12:40:03'},{mg:null,time:null},{mg:null,time:null},{mg:null,time:null}]},
+  {no:4, product:'Platinum Band D', code:'PBD-950-11', worker:'최유나', state:'정지', lot:'L-260820-118', live:false,
+   stages:[{mg:4310,time:'11:02:15'},{mg:1620,time:'11:14:47'},{mg:1105,time:'11:26:30'},{mg:640,time:'11:38:52'}]}
+];
+
+const RECORDS = [
+  {id:1, belt:1, product:'Gold Necklace A', lot:'L-260821-013', worker:'김도현', date:'2026.08.21', time:'14:05:12', mgs:[2148,812,1124,528]},
+  {id:2, belt:2, product:'Silver Ring B', lot:'L-260821-021', worker:'박서진', date:'2026.08.21', time:'13:52:40', mgs:[3402,1174,938,612]},
+  {id:3, belt:1, product:'Gold Necklace A', lot:'L-260821-012', worker:'김도현', date:'2026.08.21', time:'13:31:08', mgs:[2155,824,1118,536]},
+  {id:4, belt:4, product:'Platinum Band D', lot:'L-260820-118', worker:'최유나', date:'2026.08.20', time:'11:38:52', mgs:[4310,1620,1105,640]},
+  {id:5, belt:3, product:'Gold Earring C', lot:'L-260820-095', worker:'이민우', date:'2026.08.20', time:'10:22:19', mgs:[1118,402,286,140]},
+  {id:6, belt:2, product:'Silver Ring B', lot:'L-260820-081', worker:'박서진', date:'2026.08.20', time:'09:47:33', mgs:[3388,1162,944,604]},
+  {id:7, belt:1, product:'Gold Chain E', lot:'L-260819-044', worker:'김도현', date:'2026.08.19', time:'16:12:55', mgs:[5240,1880,1420,760]},
+  {id:8, belt:1, product:'Gold Necklace A', lot:'L-260821-011', worker:'김도현', date:'2026.08.21', time:'12:58:44', mgs:[2142,818,1130,522]},
+  {id:9, belt:3, product:'Gold Earring C', lot:'L-260821-029', worker:'이민우', date:'2026.08.21', time:'12:14:02', mgs:[1124,398,290,138]},
+  {id:10, belt:2, product:'Silver Ring B', lot:'L-260821-020', worker:'박서진', date:'2026.08.21', time:'11:36:27', mgs:[3410,1168,930,598]},
+  {id:11, belt:4, product:'Platinum Band D', lot:'L-260821-005', worker:'최유나', date:'2026.08.21', time:'10:05:16', mgs:[4298,1614,1112,634]}
+];
+const TODAY = '2026.08.21';
+const WEEKDAY = {'2026.08.21':'금요일','2026.08.20':'목요일','2026.08.19':'수요일'};
+
+const chip = on => 'border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;border:1px solid '+(on?'#1758c4':'#dfe3e8')+';background:'+(on?'#eaf1fd':'#fff')+';color:'+(on?'#1758c4':'#6f7a86');
+const pill = on => 'flex:none;border-radius:9px;padding:9px 15px;font-size:12.5px;font-weight:600;border:1px solid '+(on?'#14181d':'#dfe3e8')+';background:'+(on?'#14181d':'#fff')+';color:'+(on?'#fff':'#6f7a86');
+const stateColors = {'가동중':['#e8f6ef','#0f7a51'],'대기':['#f0f2f5','#6f7a86'],'정지':['#fdeaea','#c02b2f']};
+const badge = (state,onDark) => {
+  const [bg,fg] = stateColors[state] || stateColors['대기'];
+  return 'border-radius:7px;padding:5px 10px;font-size:11.5px;font-weight:600;background:'+(onDark?'rgba(255,255,255,.14)':bg)+';color:'+(onDark?'#fff':fg);
+};
+
+class Component extends DCLogic {
+  state = {
+    screen:'monitor',
+    belts: BELTS.map(b=>({...b, stages:b.stages.map(s=>({...s}))})),
+    openIdx:0, recIdx:0, dateFilter:'전체',
+    liveMg:0, liveStatus:'idle',
+    lastRx:'14:24:08', now: clock(new Date()),
+    toast:null, zoom:null, zoomCaption:'',
+    fault:'none', query:'', beltFilter:'전체', camIdx:0
+  };
+
+  componentDidMount(){
+    this.tick();
+    this.clockT = setInterval(()=>this.setState({now:clock(new Date())}), 1000);
+    this.key = e => { if(e.key==='Escape') this.setState({zoom:null}); };
+    window.addEventListener('keydown', this.key);
+  }
+  componentWillUnmount(){ clearTimeout(this.t); clearTimeout(this.tt); clearInterval(this.clockT); window.removeEventListener('keydown', this.key); }
+
+  get faultProp(){ return this.props.deviceFault ?? this.state.fault; }
+  liveBeltIdx(){ return this.state.belts.findIndex(b=>b.live); }
+  nextStage(){
+    const b = this.state.belts[this.liveBeltIdx()];
+    return b ? b.stages.findIndex(s=>s.mg===null) : -1;
+  }
+
+  tick = () => {
+    clearTimeout(this.t);
+    if(this.props.autoScale === false) return;
+    if(this.faultProp==='scale'){ this.setState({liveStatus:'error', liveMg:0}); return; }
+    const s = this.state.liveStatus;
+    if(s==='idle' || s==='error'){
+      if(s==='error') this.setState({liveStatus:'idle'});
+      this.t = setTimeout(()=>{
+        const stage = this.nextStage();
+        this.target = stage<=0 ? 1800+Math.round(Math.random()*2600) : 400+Math.round(Math.random()*1200);
+        this.setState({liveStatus:'measuring'}, this.tick);
+      }, 1600);
+    } else if(s==='measuring'){
+      if(!this.startedAt) this.startedAt = Date.now();
+      const dur = this.props.stabilizeMs ?? 1800;
+      const done = Date.now()-this.startedAt > dur;
+      const jitter = done ? 0 : Math.round((Math.random()-0.5)*700);
+      this.setState({liveMg: Math.max(0,this.target+jitter), lastRx: clock(new Date()), liveStatus: done?'stable':'measuring'});
+      this.t = setTimeout(this.tick, done?400:110);
+      if(done) this.startedAt = null;
+    } else if(s==='stable'){
+      this.t = setTimeout(this.autoSave, 900);
+    } else if(s==='saved'){
+      this.t = setTimeout(()=>this.setState({liveStatus:'idle', liveMg:0}, this.tick), 1400);
+    }
+  };
+
+  autoSave = () => {
+    if(this.state.liveStatus!=='stable') return;
+    if(this.faultProp==='storage'){ this.flash('저장 실패 — 다시 저장해주세요'); this.setState({liveStatus:'idle'},this.tick); return; }
+    const bi = this.liveBeltIdx();
+    const belts = this.state.belts.map(b=>({...b, stages:b.stages.map(s=>({...s}))}));
+    const b = belts[bi];
+    let si = b.stages.findIndex(s=>s.mg===null);
+    if(si === -1){
+      b.stages = b.stages.map(()=>({mg:null,time:null}));
+      b.lot = 'L-260821-'+pad2(Math.floor(Math.random()*80)+20);
+      si = 0;
+    }
+    b.stages[si] = {mg:this.state.liveMg, time:clock(new Date())};
+    this.setState({belts, liveStatus:'saved'}, this.tick);
+    this.flash(b.no+'번 벨트 '+(si+1)+'단계 자동 저장 · '+fmt(this.state.liveMg)+' g');
+  };
+
+  go = s => () => this.setState({screen:s});
+  flash = m => { this.setState({toast:m}); clearTimeout(this.tt); this.tt = setTimeout(()=>this.setState({toast:null}), 2200); };
+  zoomOn = (src,cap) => () => this.setState({zoom:src, zoomCaption:cap});
+
+  beltTotal(b){ return b.stages.reduce((a,s)=>a+(s.mg||0),0); }
+  doneStages(b){ return b.stages.filter(s=>s.mg!==null).length; }
+
+  renderVals(){
+    const st = this.state, fault = this.faultProp, screen = st.screen;
+    const titles = {monitor:'생산 현황',belt:(st.belts[Math.max(0,st.openIdx)]||{}).no+'번 벨트 · 생산 상세',history:'작업 기록',devices:'장비 관리',settings:'설정',users:'사용자 관리',errors:'오류 상태'};
+    const navKey = screen==='belt' ? 'monitor' : screen;
+    const navItems = [['monitor','생산 현황'],['history','작업 기록'],['devices','장비 관리'],['settings','설정'],['users','사용자 관리'],['errors','오류 상태']].map(([k,label])=>({
+      label, go:this.go(k),
+      style:'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-radius:9px;padding:11px 12px;font-size:13.5px;font-weight:'+(navKey===k?'600':'500')+';background:'+(navKey===k?'rgba(255,255,255,.10)':'transparent')+';color:'+(navKey===k?'#fff':'#98a2ac'),
+      dotStyle:'width:6px;height:6px;border-radius:50%;flex:none;background:'+(navKey===k?'#4f8ef7':'transparent')
+    }));
+
+    const beltRows = st.belts.map((b,i)=>{
+      const on = i===st.openIdx, total = this.beltTotal(b), done = this.doneStages(b);
+      const todayRecs = RECORDS.filter(r=>r.belt===b.no && r.date===TODAY);
+      const todaySum = todayRecs.reduce((a,r)=>a+r.mgs.reduce((x,y)=>x+y,0),0);
+      return {
+        no:b.no, product:b.product, state:b.state, lot:b.lot, worker:b.worker,
+        total:fmt(total), stageText: done+' / 4 단계', open:on, liveOn: b.live,
+        lastAt: b.live ? st.lastRx : (b.stages.filter(s=>s.time).slice(-1)[0]||{}).time || '—',
+        todayCount: todayRecs.length, todayTotal: fmt(todaySum), noToday: todayRecs.length===0,
+        today: todayRecs.map(r=>{
+          let c = 0;
+          return {
+            lot:r.lot, time:r.time, total: fmt(r.mgs.reduce((a,x)=>a+x,0)),
+            cells: r.mgs.map((mg,si)=>{ c += mg; const src = photo(si+1, TINTS[si]);
+              return {weight:fmt(mg), cum:fmt(c), photo:src, zoom:this.zoomOn(src, r.lot+' · '+STAGE_LABELS[si]+' · '+fmt(mg)+' g')}; })
+          };
+        }),
+        select: ()=>this.setState({openIdx:i, screen:'belt'}),
+        wrapStyle:'border-radius:14px;overflow:hidden;border:1px solid #e1e5ea;background:#fff',
+        headStyle:'display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:none;padding:15px 20px;background:#fff;color:#14181d',
+        badgeStyle: badge(b.state, false),
+        barStyle:'display:block;height:100%;border-radius:3px;transition:width .4s ease;background:'+(b.state==='정지'?'#d13438':'#12a06a')+';width:'+(done/4*100)+'%',
+        chevStyle:'flex:none;font-size:20px;color:#c2c9d1'
+      };
+    });
+
+    const sel = st.belts[Math.max(0,st.openIdx)];
+    const selTotal = this.beltTotal(sel);
+    const selDone = this.doneStages(sel);
+    const isLiveSel = sel.live;
+    let cum = 0;
+    const stages = sel.stages.map((s,i)=>{
+      const measured = s.mg!==null;
+      if(measured) cum += s.mg;
+      const activeNow = isLiveSel && !measured && sel.stages.slice(0,i).every(x=>x.mg!==null) && fault!=='scale';
+      const tag = measured ? '완료' : (activeNow ? '측정 중' : '대기');
+      const src = photo(i+1, TINTS[i]);
+      return {
+        label: STAGE_LABELS[i],
+        tag,
+        hasPhoto: measured, noPhoto: !measured,
+        photo: src,
+        zoom: this.zoomOn(src, sel.no+'번 벨트 · '+STAGE_LABELS[i]+' · '+fmt(s.mg||0)+' g'),
+        weight: measured ? fmt(s.mg) : (activeNow ? fmt(st.liveMg) : '—'),
+        cum: measured ? fmt(cum) : (activeNow ? fmt(cum+st.liveMg) : '—'),
+        time: measured ? s.time : (activeNow ? '측정 중 · '+st.lastRx : '대기 중'),
+        cellStyle:'flex:1;min-width:0;border-right:'+(i<3?'1px solid #e1e5ea':'none')+';background:'+(measured?'#fff':(activeNow?'#f5f9ff':'#fbfcfd')),
+        headStyle:'display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #eef0f3;background:'+(activeNow?'#eaf1fd':'#f7f8fa'),
+        tagStyle:'border-radius:6px;padding:4px 8px;font-size:10.5px;font-weight:600;'+(measured?'background:#e8f6ef;color:#0f7a51':(activeNow?'background:#1758c4;color:#fff':'background:#eceff2;color:#8a939d')),
+        weightStyle:"font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;letter-spacing:-.035em;color:"+(measured?'#14181d':(activeNow?'#1758c4':'#c2c9d1')),
+        cumStyle:'font-family:\'IBM Plex Mono\',monospace;font-size:12.5px;font-weight:600;border-radius:7px;padding:5px 10px;'+(measured?'background:#e8f6ef;color:#0f7a51':'background:#f0f2f5;color:#9aa4ae'),
+        placeholderStyle:'width:100%;height:118px;border-radius:10px;border:1px dashed #d6dbe1;display:flex;align-items:center;justify-content:center;font-size:11.5px;color:#9aa4ae;background:'+(activeNow?'repeating-linear-gradient(38deg,#e9eff8 0 6px,#dfe7f2 6px 12px)':'#f7f8fa'),
+        placeholderText: activeNow ? '촬영 대기 중' : '미측정'
+      };
+    });
+
+    const q = st.query.trim().toLowerCase();
+    const dates = Array.from(new Set(RECORDS.map(r=>r.date))).sort().reverse();
+    const dateOk = r => st.dateFilter==='전체' || (st.dateFilter==='오늘' ? r.date===TODAY : r.date===st.dateFilter);
+    const filtered = RECORDS.filter(r=>(st.beltFilter==='전체'||r.belt===Number(st.beltFilter[0])) && dateOk(r) && (!q||[r.product,r.lot,r.worker].some(v=>v.toLowerCase().includes(q))));
+    const records = filtered.map(r=>{
+      const total = r.mgs.reduce((a,b)=>a+b,0);
+      return {...r, total:fmt(total), stageText:r.mgs.length+' / 4',
+        open:()=>this.setState({recIdx:RECORDS.indexOf(r)}),
+        rowStyle:'width:100%;text-align:left;display:grid;grid-template-columns:86px 1fr 100px 118px 96px;gap:10px;align-items:center;padding:13px 16px;border:none;border-bottom:1px solid #f0f2f5;background:'+(RECORDS.indexOf(r)===st.recIdx?'#f5f9ff':'#fff')};
+    });
+    const dateGroups = dates.filter(d=>records.some(r=>r.date===d)).map(d=>{
+      const rows = records.filter(r=>r.date===d);
+      return {date:d, weekday: WEEKDAY[d]||'', isToday: d===TODAY, count: rows.length,
+        total: fmt(rows.reduce((a,r)=>a+r.mgs.reduce((x,y)=>x+y,0),0)), rows};
+    });
+    const rec = RECORDS[st.recIdx];
+    let rcum = 0;
+    const recStages = rec.mgs.map((mg,i)=>{
+      rcum += mg;
+      const src = photo(i+1, TINTS[i]);
+      return {
+        label: STAGE_LABELS[i], weight: fmt(mg), cum: fmt(rcum), photo: src,
+        time: rec.time, zoom: this.zoomOn(src, rec.lot+' · '+STAGE_LABELS[i]+' · '+fmt(mg)+' g'),
+        cellStyle:'flex:1;min-width:0;border-right:'+(i<3?'1px solid #e1e5ea':'none')+';background:#fff',
+        headStyle:'padding:10px 13px;border-bottom:1px solid #eef0f3;background:#f7f8fa'
+      };
+    });
+
+    const camList = [{name:'산업용 카메라 (GigE)',res:'2448×2048'},{name:'USB 웹캠 C920',res:'1920×1080'},{name:'외장 DSLR (SDK)',res:'6000×4000'}].map((c,i)=>({
+      ...c, pick:()=>this.setState({camIdx:i}),
+      style:'display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;border-radius:10px;padding:13px 14px;border:1px solid '+(st.camIdx===i?'#1758c4':'#dfe3e8')+';background:'+(st.camIdx===i?'#f5f9ff':'#fff')
+    }));
+
+    return {
+      screenTitle: titles[screen], nowText: st.now,
+      isMonitor: screen==='monitor', isBelt: screen==='belt', isHistory: screen==='history', isDevices: screen==='devices',
+      isSettings: screen==='settings', isUsers: screen==='users', isErrors: screen==='errors',
+      navItems, beltRows, backToList: ()=>this.setState({screen:'monitor'}),
+      bd: {...beltRows[Math.max(0,st.openIdx)], badgeStyle: badge(sel.state, true)},
+      scaleOk: fault!=='scale', scaleBad: fault==='scale',
+      camOk: fault!=='camera', camBad: fault==='camera',
+      storeOk: fault!=='storage', storeBad: fault==='storage',
+      runningCount: st.belts.filter(b=>b.state==='가동중').length, beltCount: st.belts.length,
+      todayTotal: fmt(st.belts.reduce((a,b)=>a+this.beltTotal(b),0)),
+
+      liveBadge: fault==='scale' ? '저울 수신 없음' : (st.liveStatus==='measuring' ? '측정 중' : ((st.liveStatus==='stable'||st.liveStatus==='saved') ? '안정 · 자동 저장' : '대기 · 제품 투입')),
+      liveBadgeStyle: 'border-radius:8px;padding:6px 11px;font-size:11.5px;font-weight:600;'+(fault==='scale' ? 'background:#fdeaea;color:#c02b2f' : (st.liveStatus==='measuring' ? 'background:#eaf1fd;color:#1758c4' : ((st.liveStatus==='stable'||st.liveStatus==='saved') ? 'background:#e8f6ef;color:#0f7a51' : 'background:#f0f2f5;color:#6f7a86'))),
+      dateFilters: ['전체','오늘'].concat(dates.filter(d=>d!==TODAY)).map(l=>({label:l, pick:()=>this.setState({dateFilter:l}), style:pill(st.dateFilter===l)})),
+      dateGroups, noRecords: records.length===0,
+      sel: {
+        no:sel.no, product:sel.product, code:sel.code, worker:sel.worker, state:sel.state,
+        total: fmt(selTotal), badgeStyle: badge(sel.state,false),
+        lastAt: isLiveSel ? st.lastRx : (sel.stages.filter(s=>s.time).slice(-1)[0]||{}).time || '—',
+        cycleText: sel.lot+' · '+selDone+'/4 단계 완료'
+      },
+      stages,
+      liveWeight: isLiveSel && fault!=='scale' ? fmt(st.liveMg) : '0.000',
+      stMeasuring: isLiveSel && st.liveStatus==='measuring' && fault!=='scale',
+      stStable: isLiveSel && (st.liveStatus==='stable'||st.liveStatus==='saved') && fault!=='scale',
+      stIdleLike: !isLiveSel || fault==='scale' || st.liveStatus==='idle' || st.liveStatus==='error',
+      liveNote: fault==='scale' ? '저울 수신 없음' : (!isLiveSel ? '이 벨트는 실시간 계량 대상이 아닙니다' : '대기 · 제품 투입'),
+
+      beltFilters: ['전체','1번','2번','3번','4번'].map(l=>({label:l, pick:()=>this.setState({beltFilter:l}), style:pill(st.beltFilter===l)})),
+      query: st.query, setQuery: e=>this.setState({query:e.target.value}),
+      records, recordCount: records.length,
+      recordTotal: fmt(filtered.reduce((a,r)=>a+r.mgs.reduce((x,y)=>x+y,0),0)),
+      rec: {...rec, total: fmt(rec.mgs.reduce((a,b)=>a+b,0))}, recStages,
+
+      scaleSpecs: [
+        {k:'장비명', v:'CAS MW-2N 3kg'},
+        {k:'연결 방식', v:'RS-232 → PC 게이트웨이'},
+        {k:'수신 채널', v:'WebSocket / wss'},
+        {k:'COM Port', v:'COM3'},
+        {k:'Baud Rate', v:'9600 8N1'},
+        {k:'해상도', v:'0.001 g'},
+        {k:'마지막 수신 데이터', v: fault==='scale' ? '—' : st.lastRx+' · '+fmt(st.liveMg)+' g'}
+      ],
+      testScale: ()=>this.flash('연결 테스트 성공 · 응답 42ms'),
+      camList, shoot: ()=>this.flash('테스트 사진이 촬영되었습니다'),
+      settingsMenu: [
+        {label:'사용자 관리', hint:'4명', go:this.go('users')},
+        {label:'장비 관리', hint:'저울 · 카메라', go:this.go('devices')},
+        {label:'오류 상태 화면', hint:'4종', go:this.go('errors')},
+        {label:'데이터 정밀도', hint:'0.001 g 정수 저장', go:()=>this.flash('정밀도는 0.001 g 정수(mg) 기준으로 고정됩니다')}
+      ],
+      users: [
+        {initial:'김', name:'김도현', meta:'관리자 · 1번 벨트', role:'ADMIN'},
+        {initial:'박', name:'박서진', meta:'작업자 · 2번 벨트', role:'작업자'},
+        {initial:'이', name:'이민우', meta:'작업자 · 3번 벨트', role:'작업자'},
+        {initial:'최', name:'최유나', meta:'검수 · 품질관리', role:'검수'}
+      ].map(u=>({...u, roleStyle:'border-radius:7px;padding:6px 10px;font-size:11px;font-weight:600;'+(u.role==='ADMIN'?'background:#eaf1fd;color:#1758c4':'background:#f0f2f5;color:#6f7a86')})),
+      faultChips: [['none','정상'],['scale','저울 끊김'],['camera','카메라 없음'],['storage','저장 실패']].map(([k,label])=>({
+        label, pick:()=>{ this.setState({fault:k, liveStatus: k==='scale'?'error':'idle'}, this.tick); }, style:chip(st.fault===k)
+      })),
+      recoverScale: ()=>{ this.setState({fault:'none', liveStatus:'idle'}, this.tick); this.flash('저울에 다시 연결되었습니다'); },
+      recoverCam: ()=>{ this.setState({fault:'none'}); this.flash('카메라를 다시 찾았습니다'); },
+      retrySave: ()=>{ this.setState({fault:'none'}); this.flash('저장소에 다시 연결되었습니다'); },
+      toast: st.toast, zoomSrc: st.zoom, zoomCaption: st.zoomCaption, closeZoom: ()=>this.setState({zoom:null})
+    };
+  }
+}
+</script>
+</body>
+</html>
