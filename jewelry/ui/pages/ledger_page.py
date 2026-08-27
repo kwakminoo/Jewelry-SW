@@ -9,12 +9,60 @@ from PyQt6.QtWidgets import (
     QPushButton, QSizePolicy, QStackedWidget, QTabBar, QVBoxLayout, QWidget,
 )
 
-from jewelry.ui.pages.main_page import SAMPLE_DATA, TREND_SAMPLE
 from jewelry.ui.resources.icons import app_icon
 from jewelry.ui.sidebar.sidebar import navigation_icon
 from jewelry.ui.widgets.entry_grid import EntryGrid, FixedSummaryBar, LedgerHeader
 from jewelry.ui.widgets.start_session_dialog import StartSessionDialog
 from jewelry.ui.widgets.stat_card import MonthNavCard, StatCard, TrendCard
+
+# 실제 데이터 연동 전 화면 확인용 샘플 값. 키가 없으면 빈 칸으로 표시된다.
+SAMPLE_DATA = {
+    "광": [
+        {"date": "2026-08-26", "time": "14:22", "checked": True,
+         ("14K", "in"): 15.20, ("14K", "out"): 14.80, ("18K", "in"): 30.50, ("18K", "out"): 29.90},
+        {"date": "2026-08-26", "time": "13:05",
+         ("14K", "in"): 9.35, ("14K", "out"): 9.00, ("18K", "in"): 18.25, ("18K", "out"): 17.80},
+        {"date": "2026-08-25", "time": "17:41",
+         ("14K", "in"): 22.10, ("14K", "out"): 21.55, ("18K", "in"): 12.40, ("18K", "out"): 12.05},
+        {"date": "2026-08-25", "time": "11:18", "checked": True,
+         ("14K", "in"): 8.75, ("14K", "out"): 8.40, ("18K", "in"): 26.90, ("18K", "out"): 25.10},
+        {"date": "2026-08-24", "time": "16:30",
+         ("14K", "in"): 18.40, ("14K", "out"): 17.20, ("18K", "in"): 33.15, ("18K", "out"): 31.60},
+        {"date": "2026-08-24", "time": "09:52",
+         ("14K", "in"): 6.20, ("14K", "out"): 5.95, ("18K", "in"): 11.05, ("18K", "out"): 10.70},
+        {"date": "2026-08-22", "time": "15:07",
+         ("14K", "in"): 12.65, ("14K", "out"): 11.90, ("18K", "in"): 21.30, ("18K", "out"): 20.15},
+        {"date": "2026-08-21", "time": "18:12",
+         ("14K", "in"): 7.90, ("14K", "out"): 7.35, ("18K", "in"): 9.85, ("18K", "out"): 9.20},
+        {"date": "2026-08-21", "time": "10:44",
+         ("14K", "in"): 14.05, ("14K", "out"): 13.55, ("18K", "in"): 28.60, ("18K", "out"): 27.90},
+        {"date": "2026-08-20", "time": "12:36",
+         ("14K", "in"): 11.30, ("14K", "out"): 10.80, ("18K", "in"): 24.45, ("18K", "out"): 23.90},
+        {"date": "2026-08-19", "time": "14:59",
+         ("14K", "in"): 19.75, ("14K", "out"): 18.60, ("18K", "in"): 35.20, ("18K", "out"): 34.05},
+        {"date": "2026-08-18", "time": "08:47",
+         ("14K", "in"): 5.45, ("14K", "out"): 5.10, ("18K", "in"): 8.90, ("18K", "out"): 8.55},
+        {"date": "2026-08-15", "time": "16:03",
+         ("14K", "in"): 13.20, ("14K", "out"): 12.65, ("18K", "in"): 22.75, ("18K", "out"): 21.90},
+        {"date": "2026-08-14", "time": "13:28",
+         ("14K", "in"): 16.85, ("14K", "out"): 16.10, ("18K", "in"): 31.40, ("18K", "out"): 30.25},
+        {"date": "2026-08-13", "time": "10:11",
+         ("14K", "in"): 4.95, ("14K", "out"): 4.60, ("18K", "in"): 7.20, ("18K", "out"): 6.85},
+        {"date": "2026-08-12", "time": "17:25",
+         ("14K", "in"): 21.65, ("14K", "out"): 20.15, ("18K", "in"): 38.15, ("18K", "out"): 36.30},
+    ],
+    "연마": [
+        {"date": "2026-08-25", "time": "18:02",
+         ("14K", "in"): 11.00, ("14K", "out"): 10.60, ("18K", "in"): 24.30, ("18K", "out"): 23.95},
+        {"date": "2026-08-22", "time": "09:40",
+         ("14K", "in"): 6.75, ("14K", "out"): 6.50, ("18K", "in"): 9.10, ("18K", "out"): 8.90},
+        {"date": "2026-08-18", "time": "15:12",
+         ("14K", "in"): 13.40, ("14K", "out"): 12.85, ("18K", "in"): 16.20, ("18K", "out"): 15.65},
+    ],
+}
+
+# 12개월 차익 추이 카드용 샘플 값 (제일 오른쪽이 이번 달).
+TREND_SAMPLE = [18.4, 22.1, 15.6, 27.3, 24.8, 19.2, 30.1, 26.5, 21.9, 33.4, 28.7, 43.9]
 
 TAB_ACTION_HEIGHT = 45
 
@@ -39,7 +87,7 @@ class ProcessTab(QWidget):
     def __init__(self, category: str, rows: list[dict], parent=None) -> None:
         super().__init__(parent); self.category = category; self.setMinimumHeight(0)
         layout = QVBoxLayout(self); layout.setContentsMargins(0, 0, 0, 0); layout.setSpacing(0)
-        self.header = LedgerHeader(self); self.grid = EntryGrid(rows, self); self.total_bar = FixedSummaryBar(self.grid, self)
+        self.header = LedgerHeader(self); self.grid = EntryGrid(rows, self); self.grid.category = category; self.total_bar = FixedSummaryBar(self.grid, self)
         self.footer = self._footer()
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.total_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -108,11 +156,11 @@ class MainPage(QWidget):
     def _build_stat_cards(self) -> QFrame:
         frame = QFrame(self); frame.setObjectName("statCardRow"); row = QHBoxLayout(frame)
         row.setContentsMargins(0, 0, 0, 0); row.setSpacing(0)
-        self.month_card = MonthNavCard(frame); self.month_card.prev_btn.clicked.connect(lambda: self._shift_month(-1)); self.month_card.next_btn.clicked.connect(lambda: self._shift_month(1)); row.addWidget(self.month_card, 1)
-        self.in_card = StatCard("총 입고", frame); self.in_card.set_subtitle("전월 대비 +12.4"); row.addWidget(self.in_card, 1)
-        self.out_card = StatCard("총 출고", frame); self.out_card.set_subtitle("전월 대비 +8.1"); row.addWidget(self.out_card, 1)
-        self.diff_card = StatCard("순 차익", frame); row.addWidget(self.diff_card, 1)
-        self.trend_card = TrendCard("12개월 차익 추이", TREND_SAMPLE, ("26.09", "26.08"), frame); row.addWidget(self.trend_card, 2)
+        self.month_card = MonthNavCard(frame); self.month_card.prev_btn.clicked.connect(lambda: self._shift_month(-1)); self.month_card.next_btn.clicked.connect(lambda: self._shift_month(1)); row.addWidget(self.month_card, 4)
+        self.in_card = StatCard("총 입고", frame); self.in_card.set_subtitle("전월 대비 +12.4"); row.addWidget(self.in_card, 3)
+        self.out_card = StatCard("총 출고", frame); self.out_card.set_subtitle("전월 대비 +8.1"); row.addWidget(self.out_card, 3)
+        self.diff_card = StatCard("순 차익", frame); row.addWidget(self.diff_card, 3)
+        self.trend_card = TrendCard("12개월 차익 추이", TREND_SAMPLE, ("26.09", "26.08"), frame); row.addWidget(self.trend_card, 4)
         return frame
 
     def _build_tab_action_row(self) -> QFrame:

@@ -165,7 +165,10 @@ class EntryGrid(QTableWidget):
 
     def __init__(self, sample_rows: list[dict] | None = None, parent=None) -> None:
         super().__init__(0, TOTAL_COLUMNS, parent)
+        self.category = ""  # set by ProcessTab after construction; shown in the edit dialog.
         self.horizontalHeader().hide(); self.verticalHeader().hide(); self.setShowGrid(False); self.setMinimumHeight(0)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         vertical = self.verticalHeader()
         vertical.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         vertical.setDefaultSectionSize(DATA_ROW_HEIGHT)
@@ -242,7 +245,52 @@ class EntryGrid(QTableWidget):
         for row in range(self.rowCount()):
             wrapper = self.cellWidget(row, EDIT_COL)
             if wrapper and wrapper.findChild(QPushButton) is button:
-                self.setCurrentCell(row, COLUMN_MAP["14K"][0]); self.editItem(self.item(row, COLUMN_MAP["14K"][0])); return
+                self._open_detail_dialog(row); return
+
+    def _open_detail_dialog(self, row: int) -> None:
+        from jewelry.ui.widgets.entry_detail_dialog import EntryDetailDialog
+        dialog = EntryDetailDialog(self.entry_snapshot(row), self)
+        if dialog.exec() == dialog.DialogCode.Accepted:
+            result = dialog.result_values()
+            self.apply_entry_edit(row, result["karat"], result["in"], result["out"], result["memo"])
+
+    def _extra(self, row: int) -> dict:
+        item = self.item(row, DATE_COL)
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(data, dict):
+            date, time = self.item(row, DATE_COL).text(), self.item(row, TIME_COL).text()
+            digits = sum(ord(c) for c in f"{date}{time}") % 9000 + 1000
+            data = {"record_id": f"JS-{digits:04d}", "memo": ""}
+            item.setData(Qt.ItemDataRole.UserRole, data)
+        return data
+
+    def karat_values(self, row: int, karat: str) -> tuple[float, float]:
+        inc, out, _ = COLUMN_MAP[karat]
+        return self._cell_value(row, inc), self._cell_value(row, out)
+
+    def set_karat_values(self, row: int, karat: str, in_value: float, out_value: float) -> None:
+        inc, out, _ = COLUMN_MAP[karat]
+        self.blockSignals(True)
+        self.item(row, inc).setText(f"{in_value:.2f}"); self.item(row, out).setText(f"{out_value:.2f}")
+        self.blockSignals(False)
+        self._recalc_diff(row, karat); self.changed.emit()
+
+    def entry_snapshot(self, row: int) -> dict:
+        extra = self._extra(row)
+        return {
+            "row": row, "category": self.category, "karat": "14K",
+            "date": self.item(row, DATE_COL).text(),
+            "record_id": extra["record_id"], "memo": extra["memo"],
+            "values": {karat: self.karat_values(row, karat) for karat in KARATS},
+        }
+
+    def apply_entry_edit(self, row: int, karat: str, in_value: float, out_value: float, memo: str) -> None:
+        self.set_karat_values(row, karat, in_value, out_value)
+        # item.data() can hand back a converted copy rather than the stored
+        # object, so mutate-then-setData explicitly to persist the change.
+        extra = self._extra(row)
+        extra["memo"] = memo
+        self.item(row, DATE_COL).setData(Qt.ItemDataRole.UserRole, extra)
 
     def _recalc_diff(self, row: int, karat: str) -> None:
         inc, out, diff = COLUMN_MAP[karat]; self.item(row, diff).setText(f"{self._cell_value(row, inc)-self._cell_value(row, out):+.2f}")

@@ -15,7 +15,7 @@ py -m venv .venv
 ## 주요 UI 구조
 
 - `jewelry/ui/window/main_window.py`: 창 프레임, 타이틀바, 페이지 전환
-- `jewelry/ui/pages/main_page.py`: 요약 카드, 탭, 액션 바 및 기능 연결
+- `jewelry/ui/pages/ledger_page.py`: 요약 카드, 탭, 액션 바 및 기능 연결
 - `jewelry/ui/widgets/entry_grid.py`: 2단 헤더, 데이터 행, 합계 행
 - `jewelry/ui/widgets/stat_card.py`: 월/통계/추이 카드
 - `jewelry/ui/sidebar/sidebar.py`: SVG 자산 없이 QPainter로 그린 탐색 아이콘

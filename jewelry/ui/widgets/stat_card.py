@@ -49,18 +49,33 @@ class MonthNavCard(StatCard):
 
     def __init__(self, parent=None) -> None:
         super().__init__("기준 월", parent)
+        self.value_label.setObjectName("monthNavValue")
 
         self.prev_btn = QToolButton(self)
         self.prev_btn.setObjectName("monthNavButton")
         self.prev_btn.setIcon(app_icon("chevron-left"))
         self.prev_btn.setIconSize(QSize(12, 12))
-        self.value_row.insertWidget(1, self.prev_btn)
 
         self.next_btn = QToolButton(self)
         self.next_btn.setObjectName("monthNavButton")
         self.next_btn.setIcon(app_icon("chevron-right"))
         self.next_btn.setIconSize(QSize(12, 12))
-        self.value_row.insertWidget(2, self.next_btn)
+
+        # AlignBottom alone drops the buttons flush against the row's bottom
+        # edge, below the date text's visual baseline. A small bottom margin
+        # on this wrapper raises them back up to line up with it.
+        nav_wrap = QWidget(self)
+        nav_layout = QVBoxLayout(nav_wrap)
+        nav_layout.setContentsMargins(0, 0, 0, 6)
+        nav_layout.setSpacing(0)
+        nav_row = QHBoxLayout()
+        nav_row.setSpacing(6)
+        nav_row.addWidget(self.prev_btn)
+        nav_row.addWidget(self.next_btn)
+        nav_layout.addLayout(nav_row)
+
+        self.value_row.insertSpacing(1, 10)
+        self.value_row.insertWidget(2, nav_wrap, 0, Qt.AlignmentFlag.AlignBottom)
 
         self.subtitle_label.setVisible(False)
 
@@ -90,8 +105,8 @@ class MiniTrendChart(QWidget):
         max_value = max(self._values) or 1.0
 
         count = len(self._values)
-        gap = 4
-        bar_width = max(3.0, (rect.width() - gap * (count - 1)) / count)
+        gap = 3
+        bar_width = max(2.0, (rect.width() - gap * (count - 1)) / count)
 
         for i, value in enumerate(self._values):
             height = max(3.0, (value / max_value) * (bar_area_bottom - 4))

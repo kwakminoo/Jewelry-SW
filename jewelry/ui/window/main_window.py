@@ -1,6 +1,10 @@
-from PyQt6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTimer
+import ctypes
+import sys
+from ctypes import wintypes
+
+from PyQt6.QtCore import QAbstractNativeEventFilter, QEvent, QPoint, QRect, QSize, Qt, QTimer
 from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizeGrip, QStackedWidget, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizeGrip, QStackedWidget, QVBoxLayout, QWidget
 
 from jewelry.config.settings import APP_NAME
 from jewelry.ui.pages.equipment_page import EquipmentPage
@@ -8,6 +12,80 @@ from jewelry.ui.pages.ledger_page import MainPage
 from jewelry.ui.pages.settings_page import SettingsPage
 from jewelry.ui.sidebar.sidebar import Sidebar
 from jewelry.ui.resources.icons import app_icon
+
+_IS_WINDOWS = sys.platform == "win32"
+
+WM_NCCALCSIZE = 0x0083
+WM_NCHITTEST = 0x0084
+RESIZE_BORDER = 7
+
+HTLEFT, HTRIGHT, HTTOP, HTBOTTOM = 10, 11, 12, 15
+HTTOPLEFT, HTTOPRIGHT, HTBOTTOMLEFT, HTBOTTOMRIGHT = 13, 14, 16, 17
+
+
+if _IS_WINDOWS:
+    class _MSG(ctypes.Structure):
+        _fields_ = [
+            ("hwnd", wintypes.HWND),
+            ("message", wintypes.UINT),
+            ("wParam", wintypes.WPARAM),
+            ("lParam", wintypes.LPARAM),
+            ("time", wintypes.DWORD),
+            ("pt", wintypes.POINT),
+        ]
+
+
+class _FramelessNativeFilter(QAbstractNativeEventFilter):
+    """Handles WM_NCCALCSIZE / WM_NCHITTEST for `window` via QApplication's
+    native event filter instead of overriding QWidget.nativeEvent(), which
+    crashes with an illegal instruction on this PyQt6 build.
+
+    There is no WM_GETMINMAXINFO handling here anymore: maximize is done
+    manually in MainWindow via setGeometry(screen.availableGeometry()), so
+    there's no native showMaximized() call left for Windows to compute
+    bounds for."""
+
+    def __init__(self, window: "MainWindow") -> None:
+        super().__init__()
+        self._window = window
+
+    def nativeEventFilter(self, eventType, message):
+        # An unhandled Python exception escaping this callback (called from C++)
+        # crashes the process outright on this PyQt6 build, so every path below
+        # must be defensive: guard the NULL-hwnd case explicitly and keep a
+        # blanket try/except as a last-resort safety net.
+        if not _IS_WINDOWS or bytes(eventType) not in (b"windows_generic_MSG", b"windows_dispatcher_MSG"):
+            return False, 0
+        try:
+            msg = _MSG.from_address(int(message))
+            # NOTE: this deliberately compares against the *cached*
+            # self._window._hwnd rather than re-reading self._window.winId()
+            # here. Calling winId() from inside a native event callback was
+            # tried and reproducibly crashes this PyQt6 build (illegal
+            # instruction) - it is not reentrancy-safe on this build. The
+            # cache is safe because a top-level window's native handle never
+            # changes after creation.
+            if msg.hwnd is None or int(msg.hwnd) != self._window._hwnd:
+                return False, 0
+            if msg.message == WM_NCCALCSIZE:
+                # Windows keeps WS_THICKFRAME on a FramelessWindowHint window
+                # (that's what makes native edge-drag resizing possible), and
+                # WS_THICKFRAME reserves an invisible resize border around the
+                # client area by default. That border isn't applied the same
+                # way once the window fills availableGeometry() via our manual
+                # maximize, so the visible content size shifts by a few px
+                # between normal and "maximized" states. Handling this message
+                # ourselves and returning 0 without adjusting the proposed
+                # rect makes the client rect equal the window rect - no
+                # border, so the size never shifts.
+                return True, 0
+            if msg.message == WM_NCHITTEST and not self._window.is_workspace_maximized():
+                hit = self._window._hit_test(msg.lParam)
+                if hit is not None:
+                    return True, hit
+        except Exception:
+            pass
+        return False, 0
 
 
 class WindowControlButton(QPushButton):
@@ -20,11 +98,15 @@ class WindowControlButton(QPushButton):
         self.setIcon(app_icon(f"window-{control}"))
 
 
+_DRAG_RESTORE_THRESHOLD = 4
+
+
 class TitleBar(QFrame):
     def __init__(self, window: QMainWindow) -> None:
         super().__init__(window)
         self._window = window
         self._drag_origin: QPoint | None = None
+        self._press_origin: QPoint | None = None
         self.setObjectName("titleBar")
         self.setFixedHeight(35)
         row = QHBoxLayout(self)
@@ -58,16 +140,46 @@ class TitleBar(QFrame):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton:
+            self._press_origin = event.globalPosition().toPoint()
             if self._window.is_workspace_maximized():
-                return
-            self._drag_origin = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
+                self._drag_origin = None
+            else:
+                self._drag_origin = self._press_origin - self._window.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if self._drag_origin is not None and event.buttons() & Qt.MouseButton.LeftButton:
-            self._window.move(event.globalPosition().toPoint() - self._drag_origin)
+        if not (event.buttons() & Qt.MouseButton.LeftButton):
+            return
+        global_pos = event.globalPosition().toPoint()
+        if self._window.is_workspace_maximized():
+            if self._press_origin is None:
+                return
+            delta = global_pos - self._press_origin
+            if delta.manhattanLength() < _DRAG_RESTORE_THRESHOLD:
+                return
+            # Restore using the geometry saved before maximizing (not
+            # showNormal(), since maximize is our own geometry hack, not a
+            # real Qt window state), keeping the cursor's relative x
+            # position on the titlebar stable. ratio must be computed from
+            # the press position RELATIVE to the window's own left edge, not
+            # the raw global x - on a secondary monitor whose origin isn't
+            # (0, 0), global x can exceed the window width and push ratio
+            # past 1.0, throwing the restored window off to the side.
+            window_left = self._window.frameGeometry().left()
+            relative_x = self._press_origin.x() - window_left
+            ratio = min(1.0, max(0.0, relative_x / max(self._window.width(), 1)))
+            self._window.restore_workspace()
+            target_x = global_pos.x() - int(self._window.width() * ratio)
+            target_y = global_pos.y() - self.height() // 2
+            self._window.move(target_x, target_y)
+            self._drag_origin = global_pos - self._window.frameGeometry().topLeft()
+            self._press_origin = None
+            return
+        if self._drag_origin is not None:
+            self._window.move(global_pos - self._drag_origin)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         self._drag_origin = None
+        self._press_origin = None
 
 
 class MainWindow(QMainWindow):
@@ -77,9 +189,6 @@ class MainWindow(QMainWindow):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.resize(1440, 930)
         self.setMinimumSize(1120, 720)
-        self._normal_minimum_size = QSize(1120, 720)
-        self._workspace_maximized = False
-        self._normal_geometry = QRect()
         central = QWidget(self); central.setObjectName("windowShell"); self.setCentralWidget(central)
         shell = QVBoxLayout(central); shell.setContentsMargins(1, 1, 1, 1); shell.setSpacing(0)
         self.title_bar = TitleBar(self)
@@ -95,6 +204,19 @@ class MainWindow(QMainWindow):
         self._register_page("main", MainPage(self)); self._register_page("equipment", EquipmentPage(self)); self._register_page("settings", SettingsPage(self))
         self.sidebar.page_selected.connect(self._show_page)
 
+        # Manual "workspace maximize": we size the window to the current
+        # monitor's availableGeometry() ourselves (see maximize_workspace())
+        # instead of calling showMaximized(), so maximized/normal state and
+        # the geometry to restore to are tracked explicitly rather than via
+        # isMaximized().
+        self._workspace_maximized = False
+        self._normal_geometry: QRect | None = None
+
+        self._hwnd = int(self.winId())
+        self._native_filter = _FramelessNativeFilter(self) if _IS_WINDOWS else None
+        if self._native_filter is not None:
+            QApplication.instance().installNativeEventFilter(self._native_filter)
+
     def _register_page(self, key: str, widget: QWidget) -> None:
         self._page_index[key] = self.pages.addWidget(widget)
 
@@ -102,37 +224,68 @@ class MainWindow(QMainWindow):
         self.pages.setCurrentIndex(self._page_index[key])
 
     def is_workspace_maximized(self) -> bool:
-        return self._workspace_maximized or self.isMaximized()
+        return self._workspace_maximized
+
+    def maximize_workspace(self) -> None:
+        if self._workspace_maximized:
+            return
+        screen = self.screen()
+        if screen is None:
+            return
+        self._normal_geometry = self.geometry()
+        self._workspace_maximized = True
+        self.setGeometry(screen.availableGeometry())
+        self.size_grip.hide()
+        QTimer.singleShot(0, self.title_bar.update_maximize_icon)
+
+    def restore_workspace(self) -> None:
+        if not self._workspace_maximized:
+            return
+        self._workspace_maximized = False
+        if self._normal_geometry is not None:
+            self.setGeometry(self._normal_geometry)
+        self.size_grip.show()
+        QTimer.singleShot(0, self.title_bar.update_maximize_icon)
 
     def toggle_workspace_maximized(self) -> None:
-        """Maximize to the usable desktop, never underneath the taskbar."""
-        if self.is_workspace_maximized():
-            if self.isMaximized():
-                self.showNormal()
-            self._workspace_maximized = False
-            self.setMinimumSize(self._normal_minimum_size)
-            if self._normal_geometry.isValid():
-                self.setGeometry(self._normal_geometry)
+        if self._workspace_maximized:
+            self.restore_workspace()
         else:
-            self._normal_geometry = QRect(self.geometry())
-            screen = self.screen()
-            if screen is not None:
-                available = screen.availableGeometry()
-                self.setMinimumSize(
-                    min(self._normal_minimum_size.width(), available.width()),
-                    min(self._normal_minimum_size.height(), available.height()),
-                )
-                self._workspace_maximized = True
-                self.setGeometry(available)
-        self.size_grip.setVisible(not self._workspace_maximized and not self.isMaximized())
-        self.title_bar.update_maximize_icon()
+            self.maximize_workspace()
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        self.size_grip.move(self.width() - self.size_grip.width(), self.height() - self.size_grip.height())
+        if not self._workspace_maximized:
+            self.size_grip.move(self.width() - self.size_grip.width(), self.height() - self.size_grip.height())
+        self.size_grip.setVisible(not self._workspace_maximized)
         self.size_grip.raise_()
 
     def changeEvent(self, event) -> None:  # noqa: N802
         super().changeEvent(event)
-        if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "title_bar"):
-            QTimer.singleShot(0, self.title_bar.update_maximize_icon)
+        if event.type() == QEvent.Type.WindowStateChange:
+            if hasattr(self, "title_bar"):
+                QTimer.singleShot(0, self.title_bar.update_maximize_icon)
+            if hasattr(self, "size_grip"):
+                self.size_grip.setVisible(not self._workspace_maximized)
+
+    def _hit_test(self, lparam: int) -> int | None:
+        """WM_NCHITTEST: turn the outer RESIZE_BORDER px of the frameless window into
+        native resize handles so the OS drives edge/corner resizing itself."""
+        x = ctypes.c_short(lparam & 0xFFFF).value
+        y = ctypes.c_short((lparam >> 16) & 0xFFFF).value
+        ratio = self.devicePixelRatioF() or 1.0
+        origin = self.frameGeometry().topLeft()
+        local_x = int(x / ratio) - origin.x()
+        local_y = int(y / ratio) - origin.y()
+        w, h = self.width(), self.height()
+        left, right = local_x <= RESIZE_BORDER, local_x >= w - RESIZE_BORDER
+        top, bottom = local_y <= RESIZE_BORDER, local_y >= h - RESIZE_BORDER
+        if top and left: return HTTOPLEFT
+        if top and right: return HTTOPRIGHT
+        if bottom and left: return HTBOTTOMLEFT
+        if bottom and right: return HTBOTTOMRIGHT
+        if left: return HTLEFT
+        if right: return HTRIGHT
+        if top: return HTTOP
+        if bottom: return HTBOTTOM
+        return None
