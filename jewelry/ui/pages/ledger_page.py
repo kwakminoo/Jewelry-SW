@@ -5,13 +5,14 @@ import csv
 from PyQt6.QtCore import QDate, QSize, QTime, Qt, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox,
+    QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QMenu,
     QPushButton, QSizePolicy, QStackedWidget, QTabBar, QVBoxLayout, QWidget,
 )
 
 from jewelry.ui.resources.icons import app_icon
 from jewelry.ui.sidebar.sidebar import navigation_icon
 from jewelry.ui.widgets.entry_grid import EntryGrid, FixedSummaryBar, LedgerHeader
+from jewelry.ui.widgets.info_dialog import InfoDialog
 from jewelry.ui.widgets.start_session_dialog import StartSessionDialog
 from jewelry.ui.widgets.stat_card import MonthNavCard, StatCard, TrendCard
 
@@ -205,7 +206,7 @@ class MainPage(QWidget):
         if not path: return
         with open(path, "w", newline="", encoding="utf-8-sig") as stream:
             writer = csv.writer(stream); writer.writerow(["날짜", "시간", "14K 입고", "14K 출고", "14K 차익", "18K 입고", "18K 출고", "18K 차익"]); writer.writerows(tab.grid.export_rows())
-        QMessageBox.information(self, "내보내기 완료", f"{tab.grid.data_row_count()}개 기록을 저장했습니다.")
+        InfoDialog.show_message(self, "내보내기 완료", f"{tab.grid.data_row_count()}개 기록을 저장했습니다.")
 
     def _shift_month(self, delta: int) -> None: self._month = self._month.addMonths(delta); self._refresh_month_label()
     def _refresh_month_label(self) -> None:

@@ -19,10 +19,14 @@ QPushButton#sidebarUserButton { background: white; }
 
 QFrame#statCardRow { background: #ffffff; border-bottom: 1px solid #dcdcd8; }
 QFrame#statCard { background: white; border: 0; border-right: 1px solid #dcdcd8; border-radius: 0; }
-QLabel#statTitle { color: #777772; font-size: 10px; font-weight: 600; }
-QLabel#statValue { color: #050505; font-size: 25px; font-weight: 800; }
-QLabel#monthNavValue { color: #050505; font-size: 32px; font-weight: 800; }
-QLabel#statSubtitle { color: #878781; font-size: 9px; }
+QFrame#statCard[highlighted="true"] { background: #090909; }
+QLabel#statTitle { background: transparent; color: #777772; font-size: 10px; font-weight: 600; }
+QLabel#statTitle[highlighted="true"] { color: #b9b9b4; }
+QLabel#statValue { background: transparent; color: #050505; font-size: 25px; font-weight: 800; }
+QLabel#statValue[highlighted="true"] { color: #ffffff; }
+QLabel#monthNavValue { background: transparent; color: #050505; font-size: 32px; font-weight: 800; }
+QLabel#statSubtitle { background: transparent; color: #878781; font-size: 9px; }
+QLabel#statSubtitle[highlighted="true"] { color: #6d6d68; }
 QToolButton#monthNavButton { background: white; border: 1px solid #dcdcd8; border-radius: 0; padding: 0; color: #888883; min-width: 22px; max-width: 22px; min-height: 22px; max-height: 22px; }
 QToolButton#monthNavButton:hover { border-color: #0a0a0a; color: #0a0a0a; }
 
@@ -76,7 +80,8 @@ QWidget#page { background: #f4f4f1; }
 QLabel#pageTitle { font-size: 24px; font-weight: 800; }
 QLabel#sectionTitle { font-size: 16px; font-weight: 800; }
 QLabel#mutedText { color: #777772; font-size: 11px; }
-QFrame#settingsShell, QFrame#deviceCard { background: white; border: 1px solid #090909; }
+QFrame#settingsShell { background: white; border: 0; }
+QFrame#deviceCard { background: white; border: 1px solid #090909; }
 QListWidget#settingsNav { background: #fafaf8; border: 0; border-right: 1px solid #d2d2ce; outline: 0; }
 QListWidget#settingsNav::item { min-height: 42px; padding-left: 14px; border-bottom: 1px solid #ecece8; }
 QListWidget#settingsNav::item:selected { background: #090909; color: white; font-weight: 700; }
@@ -91,6 +96,7 @@ QPushButton#appDialogClose:hover { background: #eeeeec; }
 QWidget#appDialogBody { background: white; }
 QFrame#appDialogDivider { background: #e4e4e1; border: 0; min-height: 1px; max-height: 1px; }
 QLabel#dialogFieldLabel { color: #777772; font-size: 10px; font-weight: 600; }
+QLabel#dialogMessage { color: #090909; font-size: 12px; }
 QComboBox#dialogFieldCombo { min-height: 30px; }
 QPushButton#dialogCancelButton { background: white; border: 1px solid #d2d2ce; border-radius: 0; min-width: 70px; min-height: 34px; max-height: 34px; font-weight: 700; }
 QPushButton#dialogCancelButton:hover { border-color: #090909; background: #f5f5f2; }
@@ -109,3 +115,75 @@ QPlainTextEdit#entryMemoInput:focus { border-color: #090909; }
 QLabel#entryDiffLabel { color: #777772; font-size: 10px; font-weight: 600; }
 QLabel#entryDiffValue { font-size: 22px; font-weight: 800; color: #050505; }
 QLabel#entryDiffMeta { color: #8a8a86; font-size: 10px; }
+
+QHeaderView::section { background: #f7f7f5; color: #777772; border: 0; border-bottom: 1px solid #dcdcd8; border-right: 1px solid #ececea; padding: 0 8px; min-height: 32px; font-size: 10px; font-weight: 700; }
+
+QScrollArea#workScrollArea { background: transparent; border: 0; }
+QScrollArea#workScrollArea > QWidget > QWidget { background: transparent; }
+
+QScrollBar:vertical { background: transparent; width: 6px; margin: 13px 1px 13px 0; border: 0; }
+QScrollBar::handle:vertical { background: #d2d2ce; min-height: 16px; max-height: 50px; border-radius: 0; }
+QScrollBar::handle:vertical:hover { background: #090909; }
+QScrollBar::add-line:vertical { subcontrol-position: bottom; subcontrol-origin: margin; height: 13px; border: 0; background: transparent; }
+QScrollBar::sub-line:vertical { subcontrol-position: top; subcontrol-origin: margin; height: 13px; border: 0; background: transparent; }
+QScrollBar::add-line:vertical:hover, QScrollBar::sub-line:vertical:hover { background: #f0f0ee; }
+QScrollBar::up-arrow:vertical { image: url({ICONS_DIR}/chevron-up.svg); width: 8px; height: 8px; }
+QScrollBar::down-arrow:vertical { image: url({ICONS_DIR}/chevron-down.svg); width: 8px; height: 8px; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+
+QScrollBar:horizontal { background: transparent; height: 6px; margin: 0 13px 1px 13px; border: 0; }
+QScrollBar::handle:horizontal { background: #d2d2ce; min-width: 16px; max-width: 50px; border-radius: 0; }
+QScrollBar::handle:horizontal:hover { background: #090909; }
+QScrollBar::add-line:horizontal { subcontrol-position: right; subcontrol-origin: margin; width: 13px; border: 0; background: transparent; }
+QScrollBar::sub-line:horizontal { subcontrol-position: left; subcontrol-origin: margin; width: 13px; border: 0; background: transparent; }
+QScrollBar::add-line:horizontal:hover, QScrollBar::sub-line:horizontal:hover { background: #f0f0ee; }
+QScrollBar::left-arrow:horizontal { image: url({ICONS_DIR}/chevron-left.svg); width: 8px; height: 8px; }
+QScrollBar::right-arrow:horizontal { image: url({ICONS_DIR}/chevron-right.svg); width: 8px; height: 8px; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
+
+QFrame#measureCard { background: white; border: 1px solid #dcdcd8; }
+QLabel#measureBigValue { background: transparent; font-size: 40px; font-weight: 800; color: #050505; }
+
+QFrame#beltListFrame { background: white; border: 1px solid #dcdcd8; }
+QFrame#beltRow { background: white; border-bottom: 1px solid #e8e8e5; }
+QFrame#beltRow:hover { background: #f5f5f2; }
+QLabel#beltIndex { background: transparent; color: #b9b9b4; font-size: 11px; font-weight: 700; }
+QLabel#beltName { background: transparent; font-size: 12px; font-weight: 700; color: #090909; }
+QLabel#beltMeta { background: transparent; color: #6d6d68; font-size: 11px; }
+
+QPushButton#segmentButton { background: white; border: 1px solid #d2d2ce; border-radius: 0; min-height: 27px; max-height: 27px; padding: 0 14px; font-size: 10px; font-weight: 700; }
+QPushButton#segmentButton:checked { background: #090909; color: white; border-color: #090909; }
+QPushButton#segmentButton:hover:!checked { border-color: #090909; background: #f5f5f2; }
+
+QLabel#inlineStatLabel { background: transparent; color: #777772; font-size: 10px; font-weight: 600; }
+QLabel#inlineStatValue { background: transparent; color: #050505; font-size: 18px; font-weight: 800; }
+
+QFrame#monthListPanel { background: white; border: 0; }
+QFrame#verticalDivider { background: #dcdcd8; border: 0; min-width: 1px; max-width: 1px; }
+QFrame#monthListHead { background: white; border-bottom: 1px solid #dcdcd8; }
+QFrame#monthRow { background: white; border-bottom: 1px solid #e8e8e5; }
+QFrame#monthRow:hover { background: #f5f5f2; }
+QFrame#monthRow[selected="true"] { background: #090909; }
+QLabel#monthRowLabel { background: transparent; font-size: 15px; font-weight: 800; color: #090909; }
+QLabel#monthRowLabel[selected="true"] { color: #ffffff; }
+QLabel#monthRowDiff { background: transparent; font-size: 13px; font-weight: 800; color: #090909; }
+QLabel#monthRowDiff[selected="true"] { color: #ffffff; }
+QLabel#monthRowMeta { background: transparent; color: #8a8a86; font-size: 10px; }
+QLabel#monthRowMeta[selected="true"] { color: #cfcfc9; }
+
+QFrame#dateGroupHeader { background: #f7f7f5; border-top: 1px solid #dcdcd8; border-bottom: 1px solid #dcdcd8; }
+QLabel#dateGroupTitle { background: transparent; font-size: 11px; font-weight: 700; color: #090909; }
+QLabel#dateGroupWeekday { background: transparent; color: #8a8a86; font-size: 10px; }
+QLabel#dateGroupCount { background: transparent; color: #8a8a86; font-size: 10px; }
+
+QFrame#recordRow { background: white; border-bottom: 1px solid #e8e8e5; }
+QFrame#recordRow:hover { background: #f5f5f2; }
+QLabel#recordTime { background: transparent; color: #8a8a86; font-size: 11px; }
+QLabel#recordItem { background: transparent; font-size: 11px; font-weight: 700; color: #090909; }
+QLabel#recordWeight { background: transparent; color: #6d6d68; font-size: 11px; }
+QLabel#recordDiff { background: transparent; font-size: 11px; font-weight: 800; color: #090909; }
+
+QLabel#processBadgeSolid { background: #090909; color: #ffffff; border-radius: 0; font-size: 9px; font-weight: 700; padding: 3px 0; }
+QLabel#processBadgeOutline { background: white; color: #090909; border: 1px solid #090909; border-radius: 0; font-size: 9px; font-weight: 700; padding: 2px 0; }
+
+QFrame#processSummaryPanel { background: white; border: 1px solid #dcdcd8; }

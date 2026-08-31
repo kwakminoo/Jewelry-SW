@@ -43,6 +43,13 @@ class StatCard(QFrame):
         self.subtitle_label.setText(text)
         self.subtitle_label.setVisible(bool(text))
 
+    def set_highlighted(self, on: bool) -> None:
+        """검정 배경으로 강조하는 변형 (예: 통계 화면의 누적 차익 카드)."""
+        for widget in (self, self.title_label, self.value_label, self.subtitle_label):
+            widget.setProperty("highlighted", on)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
 
 class MonthNavCard(StatCard):
     """기준 월 카드. 값 오른쪽에 이전/다음 달 버튼이 붙는다."""

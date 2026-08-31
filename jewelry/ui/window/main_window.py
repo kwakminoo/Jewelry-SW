@@ -7,9 +7,10 @@ from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizeGrip, QStackedWidget, QVBoxLayout, QWidget
 
 from jewelry.config.settings import APP_NAME
-from jewelry.ui.pages.equipment_page import EquipmentPage
+from jewelry.ui.pages.ledger_history_page import LedgerHistoryPage
 from jewelry.ui.pages.ledger_page import MainPage
 from jewelry.ui.pages.settings_page import SettingsPage
+from jewelry.ui.pages.statistics_page import StatisticsPage
 from jewelry.ui.sidebar.sidebar import Sidebar
 from jewelry.ui.resources.icons import app_icon
 
@@ -201,7 +202,9 @@ class MainWindow(QMainWindow):
         self.size_grip.setFixedSize(16, 16)
         self.size_grip.raise_()
         self._page_index = {}
-        self._register_page("main", MainPage(self)); self._register_page("equipment", EquipmentPage(self)); self._register_page("settings", SettingsPage(self))
+        self._register_page("main", MainPage(self))
+        self._register_page("ledger", LedgerHistoryPage(self)); self._register_page("report", StatisticsPage(self))
+        self._register_page("settings", SettingsPage(self))
         self.sidebar.page_selected.connect(self._show_page)
 
         # Manual "workspace maximize": we size the window to the current

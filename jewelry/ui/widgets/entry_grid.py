@@ -8,7 +8,9 @@ from PyQt6.QtWidgets import (
 )
 
 from jewelry.ui.resources.icons import app_icon
+from jewelry.ui.widgets.flat_scrollbar import FlatScrollBar
 from jewelry.ui.widgets.photo_cell import PhotoThumbnail
+from jewelry.ui.widgets.smooth_scroll import enable_smooth_scroll
 
 KARATS = ["14K", "18K"]
 _WEEKDAY_KR = ["월", "화", "수", "목", "금", "토", "일"]
@@ -32,7 +34,7 @@ FIXED_WIDTHS = {CHECKBOX_COL: 38, DATE_COL: 124, TIME_COL: 80, PHOTO_COL: 54, ED
 
 
 class _TableDelegate(QStyledItemDelegate):
-    GROUP_EDGES = {CHECKBOX_COL, TIME_COL, COLUMN_MAP["14K"][2], COLUMN_MAP["18K"][2]}
+    GROUP_EDGES = {CHECKBOX_COL, PHOTO_COL, COLUMN_MAP["14K"][2], COLUMN_MAP["18K"][2]}
 
     def paint(self, painter, option, index) -> None:  # noqa: N802
         painter.save()
@@ -168,7 +170,10 @@ class EntryGrid(QTableWidget):
         self.category = ""  # set by ProcessTab after construction; shown in the edit dialog.
         self.horizontalHeader().hide(); self.verticalHeader().hide(); self.setShowGrid(False); self.setMinimumHeight(0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.setVerticalScrollBar(FlatScrollBar(Qt.Orientation.Vertical, self))
+        enable_smooth_scroll(self)
         vertical = self.verticalHeader()
         vertical.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         vertical.setDefaultSectionSize(DATA_ROW_HEIGHT)

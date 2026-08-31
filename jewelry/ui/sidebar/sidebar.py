@@ -81,8 +81,8 @@ class Sidebar(QWidget):
     ]
     PAGE_TARGETS = {
         "home": "main",
-        "ledger": "main",
-        "report": "main",
+        "ledger": "ledger",
+        "report": "report",
         "settings": "settings",
     }
     WIDTH = 52
@@ -105,13 +105,6 @@ class Sidebar(QWidget):
             self._buttons[key] = button
 
         layout.addStretch(1)
-        user = QPushButton(self)
-        user.setObjectName("sidebarUserButton")
-        user.setFixedSize(38, 38)
-        user.setIcon(navigation_icon("user"))
-        user.setIconSize(QSize(18, 18))
-        user.setToolTip("사용자")
-        layout.addWidget(user, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._select("home")
 
