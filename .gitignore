@@ -1,0 +1,18 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.idea/
+build/
+dist/
+*.spec
+
+# 로컬 런타임 데이터 (DB, 촬영 이미지) - 기기마다 달라서 커밋하지 않음
+/data/db/*
+/data/captures/*
+!/data/db/.gitkeep
+!/data/captures/.gitkeep
+
+.vscode/*
+!.vscode/extensions.json
